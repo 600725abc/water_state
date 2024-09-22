@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>水的三態轉變過程動畫</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            background-color: #eef;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            padding-top: 20px;
+        }
+        #container {
+            position: relative;
+            width: 90%;
+            max-width: 400px;
+            height: 300px;
+            margin: 0 auto;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #fff;
+        }
+        .molecule {
+            width: 10px;
+            height: 10px;
+            background-color: #00aaff;
+            border-radius: 50%;
+            position: absolute;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        #state {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        #explanation {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #555;
+            width: 90%;
+            margin: 10px auto;
+            line-height: 1.5;
+        }
+        #temperature {
+            font-size: 18px;
+            color: #333;
+        }
+        #slider {
+            width: 90%;
+            max-width: 300px;
+        }
+        #temp-range {
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 300px;
+            margin: 0 auto;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>水的三態轉變過程動畫</h1>
+    <div id="container"></div>
+    <div id="temperature">溫度：25°C</div>
+    <div id="controls">
+        <input type="range" id="slider" min="-30" max="130" value="25" oninput="changeTemperature(this.value)">
+        <div id="temp-range">
+            <span>-30°C</span>
+            <span>50°C</span>
+            <span>130°C</span>
+        </div>
+    </div>
+    <div id="state">液態（水）</div>
+    <div id="explanation">隨著溫度的變化，水分子的運動方式會逐漸改變。</div>
+
+    <script>
+        let temperature = 25; // 初始溫度為25°C
+        let molecules = [];
+        const container = document.getElementById('container');
+        let isInitialized = false;
+
+        // 初始化分子
+        function initMolecules() {
+            container.innerHTML = '';
+            molecules = [];
+            let num = 100; // 分子數量
+            let gridSize = 20;
+            let cols = 10;
+            let rows = 10;
+
+            for(let i = 0; i < num; i++) {
+                let molecule = document.createElement('div');
+                molecule.classList.add('molecule');
+
+                // 初始化位置
+                let posX = Math.random() * (container.clientWidth - 10);
+                let posY = Math.random() * (container.clientHeight - 10);
+
+                molecule.style.left = posX + 'px';
+                molecule.style.top = posY + 'px';
+
+                // 記錄晶格位置
+                let col = i % cols;
+                let row = Math.floor(i / cols);
+                molecule.dataset.gridX = col * gridSize + 5; // 加上偏移量以居中
+                molecule.dataset.gridY = row * gridSize + 5;
+
+                container.appendChild(molecule);
+                molecules.push({
+                    element: molecule,
+                    vx: 0,
+                    vy: 0
+                });
+            }
+            isInitialized = true;
+        }
+
+        // 更新分子狀態
+        function updateMolecules() {
+            molecules.forEach(molecule => {
+                let speedFactor;
+                if(temperature >= 5) {
+                    // 液態，分子自由移動，速度隨溫度降低而減小
+                    speedFactor = (temperature - 5) / 125; // 溫度從5°C到130°C，映射到0到1
+                } else if (temperature <= -10) {
+                    // 固態，分子在晶格位置微小振動
+                    speedFactor = 0.05; // 振動幅度很小
+                } else {
+                    // 過渡區域，分子逐漸移動到晶格位置
+                    let factor = (5 - temperature) / 15; // 溫度從5°C到-10°C，factor從0到1
+                    speedFactor = 0.1; // 振動幅度
+                    // 緩慢移動到晶格位置
+                    let gridX = parseFloat(molecule.element.dataset.gridX);
+                    let gridY = parseFloat(molecule.element.dataset.gridY);
+                    let posX = parseFloat(molecule.element.style.left);
+                    let posY = parseFloat(molecule.element.style.top);
+                    molecule.element.style.left = posX + (gridX - posX) * factor * 0.05 + 'px';
+                    molecule.element.style.top = posY + (gridY - posY) * factor * 0.05 + 'px';
+                }
+
+                if(temperature >= 5) {
+                    // 液態運動
+                    molecule.vx += (Math.random() - 0.5) * speedFactor;
+                    molecule.vy += (Math.random() - 0.5) * speedFactor;
+
+                    // 限制速度
+                    let maxSpeed = speedFactor * 5;
+                    molecule.vx = Math.max(-maxSpeed, Math.min(maxSpeed, molecule.vx));
+                    molecule.vy = Math.max(-maxSpeed, Math.min(maxSpeed, molecule.vy));
+
+                    // 更新位置
+                    let posX = parseFloat(molecule.element.style.left) + molecule.vx;
+                    let posY = parseFloat(molecule.element.style.top) + molecule.vy;
+
+                    // 邊界檢查，碰到邊界反彈
+                    if(posX <= 0 || posX >= container.clientWidth - 10) {
+                        molecule.vx *= -1;
+                        posX = Math.max(0, Math.min(container.clientWidth - 10, posX));
+                    }
+                    if(posY <= 0 || posY >= container.clientHeight - 10) {
+                        molecule.vy *= -1;
+                        posY = Math.max(0, Math.min(container.clientHeight - 10, posY));
+                    }
+
+                    molecule.element.style.left = posX + 'px';
+                    molecule.element.style.top = posY + 'px';
+                } else {
+                    // 固態或過渡區域，分子在晶格位置附近微小振動
+                    let baseX = parseFloat(molecule.element.style.left);
+                    let baseY = parseFloat(molecule.element.style.top);
+                    let offsetX = (Math.random() - 0.5) * speedFactor * 2;
+                    let offsetY = (Math.random() - 0.5) * speedFactor * 2;
+                    molecule.element.style.left = (baseX + offsetX) + 'px';
+                    molecule.element.style.top = (baseY + offsetY) + 'px';
+                }
+            });
+        }
+
+        // 更新狀態和解說
+        function updateState() {
+            const stateElement = document.getElementById('state');
+            const explanationElement = document.getElementById('explanation');
+            const tempElement = document.getElementById('temperature');
+
+            tempElement.innerText = `溫度：${temperature}°C`;
+
+            let state = '';
+            let explanation = '';
+
+            if(temperature >= 5) {
+                state = '液態（水）';
+                explanation = '在 5°C 以上，水為液態。分子自由移動，運動速度隨溫度升高而增加。';
+            } else if(temperature <= -10) {
+                state = '固態（冰）';
+                explanation = '在 -10°C 以下，水完全凍結為固態冰。分子排列有序，僅有微小振動。';
+            } else {
+                state = '凝固過程';
+                explanation = '在 5°C 到 -10°C 之間，水逐漸凍結。分子運動減慢，開始形成有序結構。';
+            }
+
+            stateElement.innerText = state;
+            explanationElement.innerText = explanation;
+        }
+
+        // 主循環
+        function mainLoop() {
+            updateMolecules();
+            requestAnimationFrame(mainLoop);
+        }
+
+        // 改變溫度
+        function changeTemperature(value) {
+            temperature = parseInt(value);
+            updateState();
+        }
+
+        // 初始化
+        window.onload = function() {
+            // 確保容器尺寸已加載
+            setTimeout(() => {
+                initMolecules();
+                updateState();
+                mainLoop();
+            }, 100);
+        }
+    </script>
+</body>
+</html>
